@@ -1,34 +1,43 @@
 ---
-title: "DATA 607 - Assignment2"
+title: "DATA 607 - Assignment2 [R and SQL]"
 author: "Simon63"
 date: "February 11, 2018"
 output: html_document
+params:
+  dbPwd: enter password
 ---
+***
+Using Knit with Parameters...  
+for DB password  
+**params:  dbPwd:** enter password  
 
+***
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ###Package Installs (optional)
-install.packages("RMySQL");
+install.packages("RMySQL");  
+install.packages("ggplot2");
 
 ### Libraries
 ```{r libraries, warning=FALSE, message=FALSE}
 library(RCurl);
 library(DBI);
 library(RMySQL);
+library(ggplot2);
 ```
 
 ### Getting MySQL Driver and Connection
 ```{r mysql_con}
 dbDrv <- dbDriver("MySQL");
-con <- dbConnect(dbDrv, user="root", password="***", host="localhost", port=3306, dbname="movies");
+con <- dbConnect(dbDrv, user="root", password=params$dbPwd, host="localhost", port=3306, dbname="movies");
 ```
 
 ### Using DBI Functions
 ```{r dbi_func}
 dbListTables(con);
-dbReadTable(con, "person");
+dbReadTable(con, "movie");
 sql <- "SELECT 
      p.name, m.title, IFNULL(r.rank, 'NA') AS rank
  FROM
@@ -54,6 +63,35 @@ FROM
     rating r ON p.id = r.person_id
         INNER JOIN
     movie m ON r.movie_id = m.id;
+```
+
+###Plotting a Bar chart
+Note: SQL output.var="res"
+```{sql sql_chart, connection=con, output.var="res"}
+SELECT 
+    m.id movie_id, AVG(r.rank) AS avg_rank
+FROM
+    rating r 
+        INNER JOIN
+    movie m ON r.movie_id = m.id
+GROUP BY m.title
+ORDER BY AVG(r.rank) DESC;
+```
+
+```{r chart}
+barplot(height=res$avg_rank, names.arg = res$movie_id, xlab = "Movie ID", main = "Movie Ratings")
+```
+```{sql sql_chart_legend, connection=con, echo=FALSE, tab.cap="X Axis Legend"}
+SELECT 
+    m.id AS "Movie ID", m.title "Movie Title"
+FROM
+    movie m
+ORDER BY m.id;
+```
+
+####Close DB Connection
+```{r db_close}
+dbDisconnect(con)
 ```
 
 ### Using {sql, eval=FALSE} markdown to only display SQL (with syntax hightlighting)
